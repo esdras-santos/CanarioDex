@@ -1,13 +1,22 @@
+import 'package:algorand_dart/algorand_dart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_algosigner/algosigner.dart';
+import 'dart:typed_data';
+import '../../account.dart';
 
 class LiquidityButton extends StatefulWidget {
   String option;
-  LiquidityButton({Key? key, required this.option}) : super(key: key);
+  String algoAmount;
+  String tokenAmount;
+  LiquidityButton({Key? key, required this.option, required this.algoAmount, required this.tokenAmount}) : super(key: key);
   @override
   _LiquidityButtonState createState() => _LiquidityButtonState();
 }
 
 class _LiquidityButtonState extends State<LiquidityButton> {
+  Acc acc = Acc();
+  
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -15,7 +24,67 @@ class _LiquidityButtonState extends State<LiquidityButton> {
       height: 55.0,
       width: size.width * 0.2,
       child: RaisedButton(
-        onPressed: (){},
+        onPressed: () async{
+          if(widget.option == "ADD"){
+            final params = await acc.algorand.getSuggestedTransactionParams();
+            final transaction1 = await (ApplicationCallTransactionBuilder()
+            ..sender = acc.account[0]
+            // id of the application
+            ..applicationId = 9999999
+            ..arguments = [Uint8List.fromList("add_liquidity".codeUnits),Uint8List.fromList(acc.account[0].toString().codeUnits)]
+            ..suggestedParams = params
+            ).build();
+            final transaction2 = await (PaymentTransactionBuilder()
+            ..sender = acc.account[0]
+            ..amount = Algo.toMicroAlgos(double.parse(widget.algoAmount))
+            // this should be the smart contract address
+            ..receiver = Address.fromAlgorandAddress(address: "address")
+            ..suggestedParams = params
+            ).build();
+            final transaction3 = await (AssetTransferTransactionBuilder()
+            ..assetSender = acc.account[0]
+            ..amount = Algo.toMicroAlgos(double.parse(widget.tokenAmount))
+            ..assetId = 999999
+            // this should be the smart contract address (test if the id can be used as well)
+            ..receiver = Address.fromAlgorandAddress(address: "address")
+            ..suggestedParams = params
+            ).build();
+            AtomicTransfer.group([transaction1, transaction2, transaction3]);
+            final txs = await AlgoSigner.signTransactions([
+              {
+                'txn': transaction1.toBase64()
+              },
+              {
+                'txn': transaction2.toBase64()
+              },
+              {
+                'txn': transaction3.toBase64()
+              },
+            ]);
+            
+            final blob = txs[0]['blob'];
+            final txId = await AlgoSigner.send(ledger: 'TestNet', transaction: blob);
+            final tx = await acc.algorand.waitForConfirmation(txId);
+          } else {
+            final params = await acc.algorand.getSuggestedTransactionParams();
+            final transaction1 = await (ApplicationCallTransactionBuilder()
+            ..sender = acc.account[0]
+            // id of the application
+            ..applicationId = 9999999
+            ..arguments = [Uint8List.fromList("remove_liquidity".codeUnits),Uint8List.fromList(widget.algoAmount.codeUnits)]
+            ..suggestedParams = params
+            ).build();
+            final txs = await AlgoSigner.signTransactions([
+              {
+                'txn': transaction1.toBase64()
+              },
+            ]);
+
+            final blob = txs[0]['blob'];
+            final txId = await AlgoSigner.send(ledger: 'TestNet', transaction: blob);
+            final tx = await acc.algorand.waitForConfirmation(txId);
+          }
+        },
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
         padding: EdgeInsets.all(0.0),

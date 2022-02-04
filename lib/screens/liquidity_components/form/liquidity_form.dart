@@ -19,8 +19,16 @@ class _LiquidityFormState extends State<LiquidityForm> {
   String coin2name = "CNT";
   bool swaporder = false;
   var amountController = TextEditingController();
+  String algoAmount = "0.0";
+  String tokenAmount = "0.0";
 
   String mode = "add";
+
+  double token_amount(amount, tokenReserve, algoReserve){
+    return (amount * tokenReserve / algoReserve + 1);
+  }
+
+
 
   @override
   void initState(){
@@ -175,7 +183,9 @@ class _LiquidityFormState extends State<LiquidityForm> {
                       ),
                       onChanged: (value) {
                         setState((){
-
+                          algoAmount = value;
+                          // this input values must be taken from the blockchain
+                          tokenAmount = "${token_amount(double.parse(value), 5.0, 6.0)}";
                         });
                       },
                     ),
@@ -203,7 +213,7 @@ class _LiquidityFormState extends State<LiquidityForm> {
                     padding: const EdgeInsets.all(8.0),
                     // this text information need to be taken from the amm front-end function with blockchain data
                     child: Text(
-                      "0.0",
+                      tokenAmount,
                       style: TextStyle(fontSize: 20),),
                   ),
                   Container(
@@ -213,7 +223,7 @@ class _LiquidityFormState extends State<LiquidityForm> {
                 ],
               ) ,
             ) : Container(),
-            mode == "add" ? LiquidityButton(option: "ADD") : LiquidityButton(option: "REMOVE",),
+            mode == "add" ? LiquidityButton(option: "ADD", algoAmount: algoAmount, tokenAmount: tokenAmount,) : LiquidityButton(option: "REMOVE", algoAmount: algoAmount, tokenAmount: tokenAmount,),
             
           ],
         ),

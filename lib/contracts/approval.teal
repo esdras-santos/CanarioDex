@@ -1,0 +1,458 @@
+#pragma version 6
+gtxn 0 ApplicationID
+int 0
+==
+bnz main_l20
+gtxn 0 OnCompletion
+int CloseOut
+==
+bnz main_l19
+gtxn 0 OnCompletion
+int OptIn
+==
+bnz main_l18
+gtxn 0 OnCompletion
+int NoOp
+==
+bnz main_l5
+err
+main_l5:
+gtxna 0 ApplicationArgs 0
+byte "token_to_algo"
+==
+bnz main_l17
+gtxna 0 ApplicationArgs 0
+byte "algo_to_token"
+==
+bnz main_l16
+gtxna 0 ApplicationArgs 0
+byte "token_to_token"
+==
+bnz main_l15
+gtxna 0 ApplicationArgs 0
+byte "remove_liquidity"
+==
+bnz main_l14
+gtxna 0 ApplicationArgs 0
+byte "add_liquidity"
+==
+bnz main_l13
+gtxna 0 ApplicationArgs 0
+byte "create_pool"
+==
+bnz main_l12
+err
+main_l12:
+callsub createpooltoken_6
+b main_l21
+main_l13:
+callsub addliquidity_1
+b main_l21
+main_l14:
+callsub removeliquidity_2
+b main_l21
+main_l15:
+callsub swaptokentotoken_5
+b main_l21
+main_l16:
+callsub swapalgototoken_4
+b main_l21
+main_l17:
+callsub swaptokentoalgo_3
+b main_l21
+main_l18:
+int 0
+b main_l21
+main_l19:
+int 1
+b main_l21
+main_l20:
+int 1
+main_l21:
+return
+
+// amm
+amm_0:
+store 8
+store 7
+store 6
+load 6
+int 997
+*
+load 8
+*
+load 7
+int 1000
+*
+load 6
+int 997
+*
++
+/
+retsub
+
+// add_liquidity
+addliquidity_1:
+global CurrentApplicationAddress
+gtxn 2 XferAsset
+asset_holding_get AssetBalance
+store 0
+store 1
+gtxn 1 Amount
+int 0
+>
+gtxn 2 AssetAmount
+gtxn 1 Amount
+load 1
+*
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+/
+int 1
++
+>=
+&&
+gtxn 1 Amount
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+*
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+/
+gtxn 0 Amount
+>=
+&&
+assert
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+gtxn 1 Amount
++
+app_global_put
+gtxn 0 Sender
+byte "balanceOf"
+gtxn 0 Sender
+byte "balanceOf"
+app_local_get
+gtxn 1 Amount
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+*
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+/
++
+app_local_put
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+gtxn 1 Amount
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+*
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+/
++
+app_global_put
+gtxn 1 Amount
+byte "liquidity"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+*
+byte "reserve"
+gtxn 2 XferAsset
+itob
+concat
+app_global_get
+/
+retsub
+
+// remove_liquidity
+removeliquidity_2:
+global CurrentApplicationAddress
+gtxna 0 ApplicationArgs 2
+btoi
+asset_holding_get AssetBalance
+store 2
+store 3
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+int 0
+>
+assert
+gtxn 0 Sender
+byte "balanceOf"
+gtxn 0 Sender
+byte "balanceOf"
+app_local_get
+gtxna 0 ApplicationArgs 1
+btoi
+-
+app_local_put
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+gtxna 0 ApplicationArgs 1
+btoi
+-
+app_global_put
+byte "reserve"
+gtxna 0 ApplicationArgs 2
+concat
+byte "reserve"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+gtxna 0 ApplicationArgs 1
+btoi
+byte "reserve"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+*
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+/
+-
+app_global_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+gtxna 0 ApplicationArgs 1
+btoi
+byte "reserve"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+*
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+/
+itxn_field Amount
+gtxn 0 Sender
+itxn_field Receiver
+itxn_next
+int axfer
+itxn_field TypeEnum
+gtxna 0 ApplicationArgs 1
+btoi
+load 3
+*
+byte "liquidity"
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+/
+itxn_field AssetAmount
+gtxna 0 ApplicationArgs 2
+btoi
+itxn_field XferAsset
+gtxn 0 Sender
+itxn_field AssetReceiver
+itxn_submit
+int 1
+return
+
+// swap_token_to_algo
+swaptokentoalgo_3:
+global CurrentApplicationAddress
+gtxn 1 XferAsset
+asset_holding_get AssetBalance
+store 4
+store 5
+global GroupSize
+int 2
+==
+gtxn 1 AssetAmount
+int 0
+>
+&&
+assert
+byte "reserve"
+gtxn 1 XferAsset
+itob
+concat
+byte "reserve"
+gtxn 1 XferAsset
+itob
+concat
+app_global_get
+gtxn 1 AssetAmount
+byte "reserve"
+gtxn 1 XferAsset
+itob
+concat
+app_global_get
+load 5
+callsub amm_0
+-
+app_global_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+gtxn 1 AssetAmount
+byte "reserve"
+gtxn 1 XferAsset
+itob
+concat
+app_global_get
+load 5
+callsub amm_0
+itxn_field Amount
+gtxn 1 Sender
+itxn_field Receiver
+itxn_submit
+int 1
+return
+
+// swap_algo_to_token
+swapalgototoken_4:
+global CurrentApplicationAddress
+gtxna 0 ApplicationArgs 1
+btoi
+asset_holding_get AssetBalance
+store 9
+store 10
+global GroupSize
+int 2
+==
+gtxn 1 Amount
+int 0
+>
+&&
+assert
+byte "reserve"
+gtxna 0 ApplicationArgs 1
+concat
+byte "reserve"
+gtxna 0 ApplicationArgs 1
+concat
+app_global_get
+gtxn 1 Amount
++
+app_global_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+gtxn 1 Amount
+byte "reserve"
+gtxna 0 ApplicationArgs 1
+concat
+app_global_get
+gtxn 1 Amount
+-
+load 10
+callsub amm_0
+itxn_field Amount
+gtxna 0 ApplicationArgs 1
+btoi
+itxn_field XferAsset
+gtxn 0 Sender
+itxn_field Receiver
+itxn_submit
+int 1
+return
+
+// swap_token_to_token
+swaptokentotoken_5:
+global CurrentApplicationAddress
+gtxn 1 XferAsset
+asset_holding_get AssetBalance
+store 11
+store 12
+global CurrentApplicationAddress
+gtxna 0 ApplicationArgs 1
+btoi
+asset_holding_get AssetBalance
+store 13
+store 14
+global GroupSize
+int 1
+==
+gtxn 0 NumAccounts
+int 1
+==
+&&
+gtxn 1 AssetAmount
+int 0
+>
+&&
+assert
+itxn_begin
+int axfer
+itxn_field TypeEnum
+gtxn 1 AssetAmount
+load 12
+load 14
+callsub amm_0
+itxn_field Amount
+gtxna 0 ApplicationArgs 1
+btoi
+itxn_field XferAsset
+gtxn 1 Sender
+itxn_field Receiver
+itxn_submit
+int 1
+return
+
+// create_pool_token
+createpooltoken_6:
+itxn_begin
+int axfer
+itxn_field TypeEnum
+gtxna 0 ApplicationArgs 1
+btoi
+itxn_field XferAsset
+int 0
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetReceiver
+itxn_submit
+int 1
+retsub

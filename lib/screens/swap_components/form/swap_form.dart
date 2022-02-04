@@ -17,7 +17,11 @@ class _SwapFormState extends State<SwapForm> {
   String coin2 = "images/canary.jpg";
   String coin1name = "ALGO";
   String coin2name = "CNT";
+  String type = "algo_to_token"; 
+  String amount = "0.0";
+  String ammAmount = "0.0";
   bool swaporder = false;
+
   var amountController = TextEditingController();
 
   @override
@@ -81,11 +85,13 @@ class _SwapFormState extends State<SwapForm> {
                           coin2 = "images/canary.jpg";
                           coin1name = "ALGO";
                           coin2name = "CNT";
+                          type = "algo_to_token";
                         }else{
                           coin1 = "images/canary.jpg";
                           coin2 = "images/algologo.png";
                           coin1name = "CNT";
                           coin2name = "ALGO";
+                          type = "token_to_algo";
                         }
                       });
                     },
@@ -134,7 +140,7 @@ class _SwapFormState extends State<SwapForm> {
                       ),
                       onChanged: (value) {
                         setState((){
-
+                          amount = value;
                         });
                       },
                     ),
@@ -172,7 +178,7 @@ class _SwapFormState extends State<SwapForm> {
                 ],
               ),
             ),
-            SwapButton(),
+            SwapButton(type: type, amount: amount),
             
           ],
         ),
