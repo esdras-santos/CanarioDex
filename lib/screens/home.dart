@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:algorand_dart/algorand_dart.dart';
 
 import '../account.dart';
-import '../contracts/approval.teal';
-import '../contracts/clear.teal';
 import 'liquidity_components/form/liquidity_form.dart';
 import 'swap_components/form/swap_form.dart';
 
@@ -197,40 +195,7 @@ class _HomeState extends State<Home> {
         onPressed: () async {
           await AlgoSigner.connect();
           acc.account = await AlgoSigner.accounts(ledger: 'TestNet');
-          // declare application state storage (immutable)
-          final localInts = 1;
-          final localBytes = 1;
-          final globalInts = 1;
-          final globalBytes = 0;
-
-          final approvalProgram =
-              await acc.algorand.applicationManager.compileTEAL(approval.teal);
-
-          final clearProgram =
-              await acc.algorand.applicationManager.compileTEAL(clearProgramSource);
-
-          final params = await acc.algorand.getSuggestedTransactionParams();
-
-          final transaction = await (ApplicationCreateTransactionBuilder()
-                ..sender = acc.account[0]
-                ..approvalProgram = approvalProgram.program
-                ..clearStateProgram = clearProgram.program
-                ..globalStateSchema = StateSchema(
-                  numUint: globalInts,
-                  numByteSlice: globalBytes,
-                )
-                ..localStateSchema = StateSchema(
-                  numUint: localInts,
-                  numByteSlice: localBytes,
-                )
-                ..suggestedParams = params)
-              .build();
-
-          final signedTx = await transaction.sign(account);
-          final txId = await algorand.sendTransaction(
-            signedTx,
-            waitForConfirmation: true,
-          );
+          
         },
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
