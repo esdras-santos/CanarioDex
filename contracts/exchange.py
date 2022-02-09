@@ -15,48 +15,47 @@ def approval():
         denominator = (input_reserve * Int(1000)) + input_amount_with_fee
         return numerator / denominator
 
+    # receive the amount and asset amount
     @Subroutine(TealType.uint64)
     def add_liquidity():
         lkey = Concat(
-            LIQUIDITY, Itob(Gtxn[2].xfer_asset())
+            LIQUIDITY, Gtxn[0].application_args[1]
         )
         rkey = Concat(
-            RESERVE, Itob(Gtxn[2].xfer_asset())
+            RESERVE, Gtxn[0].application_args[1]
         )
         total_liquidity = App.globalGet(lkey)
+        algo_reserve = App.globalGet(rkey)
+        token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[0].assets[0])
         
-        if(total_liquidity > Int(0)):
-            # this line bellow can generate error with the contract balance
-            algo_reserve = App.globalGet(rkey)
-            token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[2].xfer_asset())
-            
-            liquidity_minted = Gtxn[1].amount() * total_liquidity / algo_reserve
-            
-            return Seq([
+        liquidity_minted = Gtxn[1].amount() * total_liquidity / algo_reserve
+        
+        return If(total_liquidity > Int(0),
+            Seq([
                 token_reserve,
                 Assert(
                     And(
                         Gtxn[1].amount() > Int(0),
                         Gtxn[2].asset_amount() >= (Gtxn[1].amount() * token_reserve.value() / algo_reserve + Int(1)),
-                        liquidity_minted >= Gtxn[0].amount()
+                        
                     ),
                 ),
                 App.globalPut(rkey, algo_reserve + Gtxn[1].amount()),
                 App.localPut(Gtxn[0].sender(), BALANCE, App.localGet(Gtxn[0].sender(),BALANCE) + liquidity_minted),
                 App.globalPut(lkey, total_liquidity + liquidity_minted),
                 liquidity_minted
-            ])
-        else:
-            initial_liquidity = Balance(Global.current_application_address())
-            return Seq([
+            ]),
+            Seq([
                 App.globalPut(rkey, Gtxn[1].amount()),
-                App.globalPut(lkey, initial_liquidity),
-                App.localPut(Gtxn[0].sender() , BALANCE, initial_liquidity),
-                initial_liquidity
+                App.globalPut(lkey, Balance(Global.current_application_address())),
+                App.localPut(Gtxn[0].sender() , BALANCE, Balance(Global.current_application_address())),
+                Balance(Global.current_application_address())
             ])
+        )
+
 
     # receive "amountToRemove"
-    # receive an application call
+    # receive an application call with the amount to be removed and the foreign asset
     @Subroutine(TealType.uint64)
     def remove_liquidity():
         lkey = Concat(
@@ -66,7 +65,7 @@ def approval():
             RESERVE, Gtxn[0].application_args[2]
         )
         algo_reserve = App.globalGet(rkey)
-        token_reserve = AssetHolding.balance(Global.current_application_address(),Btoi(Gtxn[0].application_args[2]))
+        token_reserve = AssetHolding.balance(Global.current_application_address(),Gtxn[0].assets[0])
         total_liquidity = App.globalGet(lkey)
         # args[1] = amountToRemove
         algo_amount = Btoi(Gtxn[0].application_args[1]) * algo_reserve / total_liquidity
@@ -86,59 +85,64 @@ def approval():
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.Payment,
                 TxnField.amount: algo_amount,
-                TxnField.receiver: Gtxn[0].sender()
+                TxnField.receiver: Gtxn[0].sender(),
+                TxnField.fee: Int(0)
             }),
             InnerTxnBuilder.Submit(),
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.AssetTransfer,
                 TxnField.asset_amount: Btoi(Gtxn[0].application_args[1]) * token_reserve.value() / total_liquidity,
-                TxnField.xfer_asset: Btoi(Gtxn[0].application_args[2]),
-                TxnField.asset_receiver: Gtxn[0].sender()
+                TxnField.xfer_asset: Gtxn[0].assets[0],
+                TxnField.asset_receiver: Gtxn[0].sender(),
+                TxnField.fee: Int(0)
             }),
             InnerTxnBuilder.Submit(),
-            Approve()
+            Int(1)
         ])
     
+
+    # receive the asset transfer
     @Subroutine(TealType.uint64)
     def swap_token_to_algo():
         rkey = Concat(
-            RESERVE, Itob(Gtxn[1].xfer_asset())
+            RESERVE, Gtxn[0].application_args[1]
         )
-        token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[1].xfer_asset())
+        token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[0].assets[0])
         algo_reserve = App.globalGet(rkey)
-        amount = amm(Gtxn[1].asset_amount(), algo_reserve, token_reserve.value())
+        
         return Seq(  
             token_reserve,
             Assert(
                 And(
-                    Global.group_size() == Int(2),
                     Gtxn[1].asset_amount() > Int(0),
                 )
             ),
-            App.globalPut(rkey, algo_reserve - amount),
+            App.globalPut(rkey, algo_reserve - amm(Gtxn[1].asset_amount(), token_reserve.value(), algo_reserve)),
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.Payment,
-                TxnField.amount: amount,
-                TxnField.receiver: Gtxn[1].sender()
+                TxnField.amount: amm(Gtxn[1].asset_amount(), token_reserve.value(), algo_reserve),
+                TxnField.receiver: Gtxn[1].sender(),
+                TxnField.fee: Int(0)
             }),
             InnerTxnBuilder.Submit(),
-            Approve()
+            Int(1)
         )
     
+
+    # pass the foreign asset in the appcall and a payment transfer
     @Subroutine(TealType.uint64)
     def swap_algo_to_token():
         rkey = Concat(
             RESERVE, Gtxn[0].application_args[1]
         )
-        token_reserve = AssetHolding.balance(Global.current_application_address(), Btoi(Gtxn[0].application_args[1]))
+        token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[0].assets[0])
         algo_reserve = App.globalGet(rkey)
         return Seq([
             token_reserve,
             Assert(
                 And(
-                    Global.group_size() == Int(2),
                     Gtxn[1].amount() > Int(0),
                 )
             ),
@@ -146,30 +150,25 @@ def approval():
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.AssetTransfer,
-                
-                TxnField.amount: amm(Gtxn[1].amount(),(algo_reserve - Gtxn[1].amount()), token_reserve.value()),
-                TxnField.xfer_asset: Btoi(Gtxn[0].application_args[1]),
-                
-                TxnField.receiver: Gtxn[0].sender()
+                TxnField.asset_amount: amm(Gtxn[1].amount(),algo_reserve, token_reserve.value()),
+                TxnField.xfer_asset: Gtxn[0].assets[0],
+                TxnField.asset_receiver: Gtxn[0].sender(),
+                TxnField.fee: Int(0)
             }),
             InnerTxnBuilder.Submit(),
-            Approve()
+            Int(1)
         ])
 
+    # pass the foreign asset in the appcall and a tx transfer of the asset
     @Subroutine(TealType.uint64)
     def swap_token_to_token():
-        rkey = Concat(
-            RESERVE, Itob(Gtxn[1].xfer_asset())
-        )
         token_reserve = AssetHolding.balance(Global.current_application_address(), Gtxn[1].xfer_asset())
-        token_reserve2 = AssetHolding.balance(Global.current_application_address(), Btoi(Gtxn[0].application_args[1]))
+        token_reserve2 = AssetHolding.balance(Global.current_application_address(), Gtxn[0].assets[0])
         return Seq([
             token_reserve,
             token_reserve2,
             Assert(
                 And(
-                    Global.group_size() == Int(1),
-                    Gtxn[0].accounts.length() == Int(1),
                     Gtxn[1].asset_amount() > Int(0),
                 ),
             ),
@@ -177,26 +176,27 @@ def approval():
             
             InnerTxnBuilder.SetFields({
                 TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.amount: amm(Gtxn[1].asset_amount(), token_reserve.value(), token_reserve2.value()),
-                TxnField.xfer_asset: Btoi(Gtxn[0].application_args[1]),
-                TxnField.receiver: Gtxn[1].sender()
+                TxnField.asset_amount: amm(Gtxn[1].asset_amount(), token_reserve.value(), token_reserve2.value()),
+                TxnField.xfer_asset: Gtxn[0].assets[0],
+                TxnField.asset_receiver: Gtxn[1].sender(),
+                TxnField.fee: Int(0)
             }),
             InnerTxnBuilder.Submit(),
-            Approve()
+            Int(1)
         ])
 
-
+    # pass the foreign asset in the appcall
     @Subroutine(TealType.uint64)
     def create_pool_token():
-        
         return Seq(
             InnerTxnBuilder.Begin(),
             InnerTxnBuilder.SetFields(
                 {
                     TxnField.type_enum: TxnType.AssetTransfer,
-                    TxnField.xfer_asset: Btoi(Gtxn[0].application_args[1]),
+                    TxnField.xfer_asset: Gtxn[0].assets[0],
                     TxnField.asset_amount: Int(0),
                     TxnField.asset_receiver: Global.current_application_address(),
+                    TxnField.fee: Int(0),
                 }
             ),
             InnerTxnBuilder.Submit(),
@@ -217,8 +217,9 @@ def approval():
     return Cond(
         [Gtxn[0].application_id() == Int(0), Int(1)],
         [Gtxn[0].on_completion() == OnComplete.CloseOut, Int(1)],
-        [Gtxn[0].on_completion() == OnComplete.OptIn, Int(0)],
+        [Gtxn[0].on_completion() == OnComplete.OptIn, Int(1)],
         [Gtxn[0].on_completion() == OnComplete.NoOp, router],
+        [Gtxn[0].on_completion() == OnComplete.DeleteApplication, Int(1)],
     )
 
 

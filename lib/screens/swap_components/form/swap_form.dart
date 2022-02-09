@@ -1,6 +1,8 @@
 import 'package:canarioswap/screens/swap_components/swap_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../account.dart';
 // import 'package:decimal/decimal.dart';
 // import '../../../decision_button.dart';
 // import '../../../price_input_container.dart';
@@ -21,12 +23,27 @@ class _SwapFormState extends State<SwapForm> {
   String amount = "0.0";
   String ammAmount = "0.0";
   bool swaporder = false;
+  int algo_reserve = 0;
+  int token_reserve = 0;
+  Acc acc = Acc();
 
   var amountController = TextEditingController();
 
   @override
   void initState(){
     super.initState();
+    acc.algorand.getAccountByAddress("NECNUFO5WGOKJ2VFWYA7ITZY5SJJK6LAJZ6YMEDEHB2XOGT6E3XMD5I55A").then((value) {
+      algo_reserve = value.amount - 200000;
+      token_reserve = value.assets[0].amount;
+    });
+    
+  }
+
+  int amm(int amount, int input_reserve, int output_reserve){
+    int input_amount_with_fee = amount * 997;
+    int numerator = input_amount_with_fee * output_reserve;
+    int denominator = (input_reserve * 1000) + input_amount_with_fee;
+    return (numerator ~/ denominator);
   }
 
   @override
@@ -129,7 +146,7 @@ class _SwapFormState extends State<SwapForm> {
                       controller: amountController,
                       // keyboardType: TextInputType.number,
                       inputFormatters: [
-                        CurrencyTextInputFormatter(maxInputValue: 8.0),
+                        CurrencyTextInputFormatter(maxInputValue: 100000000),
                       ],
                       cursorColor: Colors.green,
                       decoration: InputDecoration(
@@ -140,7 +157,14 @@ class _SwapFormState extends State<SwapForm> {
                       ),
                       onChanged: (value) {
                         setState((){
-                          amount = value;
+                          var str = value.split('.');
+                          amount = str.join();
+                          if(type == "algo_to_token"){
+                            ammAmount = "${amm(int.parse(amount), algo_reserve,token_reserve)}";
+                          }else{
+                            ammAmount = "${amm(int.parse(amount), token_reserve,algo_reserve)}";
+                          }
+                          
                         });
                       },
                     ),
@@ -168,8 +192,8 @@ class _SwapFormState extends State<SwapForm> {
                     padding: const EdgeInsets.all(8.0),
                     // this text information need to be taken from the amm front-end function with blockchain data
                     child: Text(
-                      "0.0",
-                      style: TextStyle(fontSize: 20),),
+                      ammAmount,
+                      style: TextStyle(fontSize: 18),),
                   ),
                   Container(
                     width: 40,

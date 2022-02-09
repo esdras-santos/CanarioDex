@@ -37,6 +37,8 @@ dependencies:
   decimal: ^2.1.0
   algorand_dart: ^1.0.1
   flutter_algosigner: ^0.0.2
+  flutter_myalgo_connect: ^1.0.0
+  dio: ^4.0.4
 
 dev_dependencies:
   flutter_test:

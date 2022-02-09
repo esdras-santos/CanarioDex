@@ -8,14 +8,20 @@ class Acc{
     return _acc;
   }
 
+  final algodClient = AlgodClient(
+      apiUrl: "https://testnet-algorand.api.purestake.io/ps2",
+      apiKey: "PfnqW3Fhko5otXC7SDrah89enw41gNSO2kBeMNw0",
+      tokenKey: PureStake.API_TOKEN_HEADER
+  );
+
   final algorand = Algorand(
     algodClient: AlgodClient(
-      apiUrl: PureStake.TESTNET_ALGOD_API_URL,
+      apiUrl: "https://testnet-algorand.api.purestake.io/ps2",
       apiKey: "PfnqW3Fhko5otXC7SDrah89enw41gNSO2kBeMNw0",
       tokenKey: PureStake.API_TOKEN_HEADER
     ),
     indexerClient: IndexerClient(
-      apiUrl: PureStake.TESTNET_INDEXER_API_URL,
+      apiUrl: "https://testnet-algorand.api.purestake.io/idx2",
       apiKey: "PfnqW3Fhko5otXC7SDrah89enw41gNSO2kBeMNw0",
       tokenKey: PureStake.API_TOKEN_HEADER
     ),
@@ -25,5 +31,5 @@ class Acc{
     )
   );
 
-  List account = [];
+  List<String> account = [];
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import "package:flutter/material.dart";
 import 'package:flutter/services.dart';
 import 'package:algorand_dart/algorand_dart.dart';
@@ -5,10 +7,10 @@ import 'package:algorand_dart/algorand_dart.dart';
 import '../account.dart';
 import 'liquidity_components/form/liquidity_form.dart';
 import 'swap_components/form/swap_form.dart';
+import 'dart:typed_data';
 
-import 'package:flutter_algosigner/algosigner.dart';
-import 'package:flutter_algosigner/algosigner_web.dart';
-import 'package:flutter_algosigner/generated_plugin_registrant.dart';
+import 'package:flutter_myalgo_connect/myalgo_connect.dart';
+import 'package:flutter_myalgo_connect/myalgo_connect_web.dart';
 
 
 class Home extends StatefulWidget {
@@ -22,7 +24,8 @@ class _HomeState extends State<Home> {
   Widget form = SwapForm();
   String mode = "swap";
   Acc acc = Acc();
-
+  bool connected = false;
+  String uiaddr = '';
 
   @override
   Widget build(BuildContext context) {
@@ -188,13 +191,16 @@ class _HomeState extends State<Home> {
 
   Widget connectButton() {
     Size size = MediaQuery.of(context).size;
-    return Container(
+    return !connected ? Container(
       height: 40.0,
       width: size.width * 0.1,
       child: RaisedButton(
         onPressed: () async {
-          await AlgoSigner.connect();
-          acc.account = await AlgoSigner.accounts(ledger: 'TestNet');
+          acc.account = await MyAlgoConnect.connect();
+          setState(() {
+            connected = true;
+            uiaddr = "${acc.account[0].substring(0, 5)}...${acc.account[0].substring(acc.account[0].length-5)}";
+          });
           
         },
         shape:
@@ -228,6 +234,9 @@ class _HomeState extends State<Home> {
           ),
         ),
       ),
+    ) : Container(
+          padding: EdgeInsets.all(8.0),
+          child: Text(uiaddr, style: TextStyle(color: Colors.black, fontSize: 16),),
     );  
   }
 }

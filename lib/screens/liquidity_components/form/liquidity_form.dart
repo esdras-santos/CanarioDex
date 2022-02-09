@@ -1,10 +1,8 @@
 import 'package:canarioswap/screens/liquidity_components/liquidity_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:decimal/decimal.dart';
-// import '../../../decision_button.dart';
-// import '../../../price_input_container.dart';
-// import '../../../sell_rounded_button.dart';
+
+import '../../../account.dart';
 
 class LiquidityForm extends StatefulWidget {
   
@@ -21,18 +19,26 @@ class _LiquidityFormState extends State<LiquidityForm> {
   var amountController = TextEditingController();
   String algoAmount = "0.0";
   String tokenAmount = "0.0";
-
+  int algo_reserve = 0;
+  int token_reserve = 0;
+  Acc acc = Acc();
   String mode = "add";
 
-  double token_amount(amount, tokenReserve, algoReserve){
-    return (amount * tokenReserve / algoReserve + 1);
+  int tokenLiquidityAmount(int amount, int input_reserve, int output_reserve){
+    if(input_reserve == 0){
+      return (amount+1);
+    }
+    return (amount * output_reserve ~/ input_reserve + 1);
   }
-
-
 
   @override
   void initState(){
     super.initState();
+    acc.algorand.getAccountByAddress("NECNUFO5WGOKJ2VFWYA7ITZY5SJJK6LAJZ6YMEDEHB2XOGT6E3XMD5I55A").then((value) {
+      algo_reserve = value.amount - 200000;
+      token_reserve = value.assets[0].amount;
+    });
+    
   }
 
   @override
@@ -172,7 +178,7 @@ class _LiquidityFormState extends State<LiquidityForm> {
                       controller: amountController,
                       // keyboardType: TextInputType.number,
                       inputFormatters: [
-                        CurrencyTextInputFormatter(maxInputValue: 8.0),
+                        CurrencyTextInputFormatter(maxInputValue: 10000000),
                       ],
                       cursorColor: Colors.green,
                       decoration: InputDecoration(
@@ -183,9 +189,17 @@ class _LiquidityFormState extends State<LiquidityForm> {
                       ),
                       onChanged: (value) {
                         setState((){
-                          algoAmount = value;
+                          if(value.contains('.')){
+                            var str = value.split('.');
+                            print(int.parse(str.join()));
+                            algoAmount = str.join();
+                          }else{
+                            algoAmount = value;
+                          }
+                          
                           // this input values must be taken from the blockchain
-                          tokenAmount = "${token_amount(double.parse(value), 5.0, 6.0)}";
+                          tokenAmount = "${tokenLiquidityAmount(int.parse(algoAmount), token_reserve, algo_reserve)}";
+                          print(tokenAmount);
                         });
                       },
                     ),
@@ -214,7 +228,7 @@ class _LiquidityFormState extends State<LiquidityForm> {
                     // this text information need to be taken from the amm front-end function with blockchain data
                     child: Text(
                       tokenAmount,
-                      style: TextStyle(fontSize: 20),),
+                      style: TextStyle(fontSize: 18),),
                   ),
                   Container(
                     width: 40,

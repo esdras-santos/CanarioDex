@@ -2,73 +2,80 @@
 gtxn 0 ApplicationID
 int 0
 ==
-bnz main_l20
+bnz main_l22
 gtxn 0 OnCompletion
 int CloseOut
 ==
-bnz main_l19
+bnz main_l21
 gtxn 0 OnCompletion
 int OptIn
 ==
-bnz main_l18
+bnz main_l20
 gtxn 0 OnCompletion
 int NoOp
 ==
-bnz main_l5
+bnz main_l7
+gtxn 0 OnCompletion
+int DeleteApplication
+==
+bnz main_l6
 err
-main_l5:
+main_l6:
+int 1
+b main_l23
+main_l7:
 gtxna 0 ApplicationArgs 0
 byte "token_to_algo"
 ==
-bnz main_l17
+bnz main_l19
 gtxna 0 ApplicationArgs 0
 byte "algo_to_token"
 ==
-bnz main_l16
+bnz main_l18
 gtxna 0 ApplicationArgs 0
 byte "token_to_token"
 ==
-bnz main_l15
+bnz main_l17
 gtxna 0 ApplicationArgs 0
 byte "remove_liquidity"
 ==
-bnz main_l14
+bnz main_l16
 gtxna 0 ApplicationArgs 0
 byte "add_liquidity"
 ==
-bnz main_l13
+bnz main_l15
 gtxna 0 ApplicationArgs 0
 byte "create_pool"
 ==
-bnz main_l12
+bnz main_l14
 err
-main_l12:
-callsub createpooltoken_6
-b main_l21
-main_l13:
-callsub addliquidity_1
-b main_l21
 main_l14:
-callsub removeliquidity_2
-b main_l21
+callsub createpooltoken_6
+b main_l23
 main_l15:
-callsub swaptokentotoken_5
-b main_l21
+callsub addliquidity_1
+b main_l23
 main_l16:
-callsub swapalgototoken_4
-b main_l21
+callsub removeliquidity_2
+b main_l23
 main_l17:
-callsub swaptokentoalgo_3
-b main_l21
+callsub swaptokentotoken_5
+b main_l23
 main_l18:
-int 0
-b main_l21
+callsub swapalgototoken_4
+b main_l23
 main_l19:
-int 1
-b main_l21
+callsub swaptokentoalgo_3
+b main_l23
 main_l20:
 int 1
+b main_l23
 main_l21:
+int 1
+b main_l23
+main_l22:
+int 1
+main_l23:
 return
 
 // amm
@@ -93,8 +100,35 @@ retsub
 
 // add_liquidity
 addliquidity_1:
+byte "liquidity"
+gtxna 0 ApplicationArgs 1
+concat
+app_global_get
+int 0
+>
+bnz addliquidity_1_l2
+byte "reserve"
+gtxna 0 ApplicationArgs 1
+concat
+gtxn 1 Amount
+app_global_put
+byte "liquidity"
+gtxna 0 ApplicationArgs 1
+concat
 global CurrentApplicationAddress
-gtxn 2 XferAsset
+balance
+app_global_put
+gtxn 0 Sender
+byte "balanceOf"
+global CurrentApplicationAddress
+balance
+app_local_put
+global CurrentApplicationAddress
+balance
+b addliquidity_1_l3
+addliquidity_1_l2:
+global CurrentApplicationAddress
+gtxna 0 Assets 0
 asset_holding_get AssetBalance
 store 0
 store 1
@@ -106,8 +140,7 @@ gtxn 1 Amount
 load 1
 *
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 /
@@ -115,30 +148,12 @@ int 1
 +
 >=
 &&
-gtxn 1 Amount
-byte "liquidity"
-gtxn 2 XferAsset
-itob
-concat
-app_global_get
-*
-byte "reserve"
-gtxn 2 XferAsset
-itob
-concat
-app_global_get
-/
-gtxn 0 Amount
->=
-&&
 assert
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 gtxn 1 Amount
@@ -151,38 +166,32 @@ byte "balanceOf"
 app_local_get
 gtxn 1 Amount
 byte "liquidity"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 *
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 /
 +
 app_local_put
 byte "liquidity"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 byte "liquidity"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 gtxn 1 Amount
 byte "liquidity"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 *
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 /
@@ -190,24 +199,22 @@ app_global_get
 app_global_put
 gtxn 1 Amount
 byte "liquidity"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 *
 byte "reserve"
-gtxn 2 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 /
+addliquidity_1_l3:
 retsub
 
 // remove_liquidity
 removeliquidity_2:
 global CurrentApplicationAddress
-gtxna 0 ApplicationArgs 2
-btoi
+gtxna 0 Assets 0
 asset_holding_get AssetBalance
 store 2
 store 3
@@ -277,6 +284,8 @@ app_global_get
 itxn_field Amount
 gtxn 0 Sender
 itxn_field Receiver
+int 0
+itxn_field Fee
 itxn_submit
 itxn_begin
 int axfer
@@ -291,46 +300,40 @@ concat
 app_global_get
 /
 itxn_field AssetAmount
-gtxna 0 ApplicationArgs 2
-btoi
+gtxna 0 Assets 0
 itxn_field XferAsset
 gtxn 0 Sender
 itxn_field AssetReceiver
+int 0
+itxn_field Fee
 itxn_submit
 int 1
-return
+retsub
 
 // swap_token_to_algo
 swaptokentoalgo_3:
 global CurrentApplicationAddress
-gtxn 1 XferAsset
+gtxna 0 Assets 0
 asset_holding_get AssetBalance
 store 4
 store 5
-global GroupSize
-int 2
-==
 gtxn 1 AssetAmount
 int 0
 >
-&&
 assert
 byte "reserve"
-gtxn 1 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 byte "reserve"
-gtxn 1 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
 gtxn 1 AssetAmount
+load 5
 byte "reserve"
-gtxn 1 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
-load 5
 callsub amm_0
 -
 app_global_put
@@ -338,35 +341,31 @@ itxn_begin
 int pay
 itxn_field TypeEnum
 gtxn 1 AssetAmount
+load 5
 byte "reserve"
-gtxn 1 XferAsset
-itob
+gtxna 0 ApplicationArgs 1
 concat
 app_global_get
-load 5
 callsub amm_0
 itxn_field Amount
 gtxn 1 Sender
 itxn_field Receiver
+int 0
+itxn_field Fee
 itxn_submit
 int 1
-return
+retsub
 
 // swap_algo_to_token
 swapalgototoken_4:
 global CurrentApplicationAddress
-gtxna 0 ApplicationArgs 1
-btoi
+gtxna 0 Assets 0
 asset_holding_get AssetBalance
 store 9
 store 10
-global GroupSize
-int 2
-==
 gtxn 1 Amount
 int 0
 >
-&&
 assert
 byte "reserve"
 gtxna 0 ApplicationArgs 1
@@ -386,19 +385,18 @@ byte "reserve"
 gtxna 0 ApplicationArgs 1
 concat
 app_global_get
-gtxn 1 Amount
--
 load 10
 callsub amm_0
-itxn_field Amount
-gtxna 0 ApplicationArgs 1
-btoi
+itxn_field AssetAmount
+gtxna 0 Assets 0
 itxn_field XferAsset
 gtxn 0 Sender
-itxn_field Receiver
+itxn_field AssetReceiver
+int 0
+itxn_field Fee
 itxn_submit
 int 1
-return
+retsub
 
 // swap_token_to_token
 swaptokentotoken_5:
@@ -408,22 +406,13 @@ asset_holding_get AssetBalance
 store 11
 store 12
 global CurrentApplicationAddress
-gtxna 0 ApplicationArgs 1
-btoi
+gtxna 0 Assets 0
 asset_holding_get AssetBalance
 store 13
 store 14
-global GroupSize
-int 1
-==
-gtxn 0 NumAccounts
-int 1
-==
-&&
 gtxn 1 AssetAmount
 int 0
 >
-&&
 assert
 itxn_begin
 int axfer
@@ -432,28 +421,30 @@ gtxn 1 AssetAmount
 load 12
 load 14
 callsub amm_0
-itxn_field Amount
-gtxna 0 ApplicationArgs 1
-btoi
+itxn_field AssetAmount
+gtxna 0 Assets 0
 itxn_field XferAsset
 gtxn 1 Sender
-itxn_field Receiver
+itxn_field AssetReceiver
+int 0
+itxn_field Fee
 itxn_submit
 int 1
-return
+retsub
 
 // create_pool_token
 createpooltoken_6:
 itxn_begin
 int axfer
 itxn_field TypeEnum
-gtxna 0 ApplicationArgs 1
-btoi
+gtxna 0 Assets 0
 itxn_field XferAsset
 int 0
 itxn_field AssetAmount
 global CurrentApplicationAddress
 itxn_field AssetReceiver
+int 0
+itxn_field Fee
 itxn_submit
 int 1
 retsub

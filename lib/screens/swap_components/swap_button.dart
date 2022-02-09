@@ -1,8 +1,12 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:algorand_dart/algorand_dart.dart';
-import 'package:flutter_algosigner/algosigner.dart';
+import 'package:flutter_myalgo_connect/myalgo_connect.dart';
+import 'package:flutter_myalgo_connect/myalgo_connect_web.dart';
+
 import '../../account.dart';
 
 class SwapButton extends StatefulWidget {
@@ -17,6 +21,15 @@ class SwapButton extends StatefulWidget {
 
 class _SwapButtonState extends State<SwapButton> {
   Acc acc = Acc();
+
+  @override
+  void initState(){
+    super.initState();
+
+  }
+
+  
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -28,64 +41,91 @@ class _SwapButtonState extends State<SwapButton> {
           if(widget.type == "algo_to_token"){
             final params = await acc.algorand.getSuggestedTransactionParams();
             final transaction1 = await (ApplicationCallTransactionBuilder()
-            ..sender = acc.account[0]
+            ..sender = Address.fromAlgorandAddress(address: acc.account[0])
             // id of the application
-            ..applicationId = 9999999
-            ..arguments = [Uint8List.fromList("algo_to_token".codeUnits),Uint8List.fromList(acc.account[0].toString().codeUnits)]
+            ..applicationId = 70171358
+            ..arguments = [Uint8List.fromList("algo_to_token".codeUnits),Uint8List.fromList("69768909".codeUnits)]
+            ..foreignAssets = [69768909]
             ..suggestedParams = params
+            ..flatFee = 2000
             ).build();
             final transaction2 = await (PaymentTransactionBuilder()
-            ..sender = acc.account[0]
-            ..amount = Algo.toMicroAlgos(double.parse(widget.amount))
+            ..sender = Address.fromAlgorandAddress(address: acc.account[0])
+            ..amount = int.parse(widget.amount)
             // this should be the smart contract address
-            ..receiver = Address.fromAlgorandAddress(address: "address")
+            ..receiver = Address.fromAlgorandAddress(address: "ZBXU7NWTQLFG3TYJ2Z2JRXU57XJJHJWZFNDMNWRE4VCNWAV6M5MUZSLTXQ")
             ..suggestedParams = params
+            ..flatFee = 2000 
             ).build();
             AtomicTransfer.group([transaction1, transaction2]);
-            final txs = await AlgoSigner.signTransactions([
-              {
-                'txn': transaction1.toBase64()
-              },
-              {
-                'txn': transaction2.toBase64()
-              },
-              
+            final txs = await MyAlgoConnect.signTransactions([
+              transaction1.toBase64(),
+              transaction2.toBase64()
             ]);
+            final blob1 = txs[0]['blob'];
+            final blob2 = txs[1]['blob'];
+            String txId = "";
+            try{
+              txId = await acc.algorand.sendRawTransactions([
+                base64Decode(blob1),
+                base64Decode(blob2)
+              ]);
+            } on AlgorandException catch (ex){
+              final cause = ex.cause;
+              if (cause is DioError) {
+                print(cause.response?.data['message']);
+              }
+            }
             
-            final blob = txs[0]['blob'];
-            final txId = await AlgoSigner.send(ledger: 'TestNet', transaction: blob);
             final tx = await acc.algorand.waitForConfirmation(txId);
+            print('https://testnet.algoexplorer.io/tx/$txId');
           } else if(widget.type == "token_to_algo"){
             final params = await acc.algorand.getSuggestedTransactionParams();
             final transaction1 = await (ApplicationCallTransactionBuilder()
-            ..sender = acc.account[0]
+            ..sender = Address.fromAlgorandAddress(address: acc.account[0])
             // id of the application
-            ..applicationId = 9999999
-            ..arguments = [Uint8List.fromList("token_to_algo".codeUnits)]
+            ..applicationId = 70171358
+            ..arguments = [Uint8List.fromList("token_to_algo".codeUnits),Uint8List.fromList("69768909".codeUnits)]
+            ..foreignAssets = [69768909]
             ..suggestedParams = params
+            ..flatFee = 2000
             ).build();
             final transaction2 = await (AssetTransferTransactionBuilder()
-            ..assetSender = acc.account[0]
-            ..amount = Algo.toMicroAlgos(double.parse(widget.amount))
-            ..assetId = 999999
-            // this should be the smart contract address (test if the id can be used as well)
-            ..receiver = Address.fromAlgorandAddress(address: "address")
+            ..sender = Address.fromAlgorandAddress(address: acc.account[0])
+            ..amount = int.parse(widget.amount)
+            // this should be the smart contract address
+            ..receiver = Address.fromAlgorandAddress(address: "ZBXU7NWTQLFG3TYJ2Z2JRXU57XJJHJWZFNDMNWRE4VCNWAV6M5MUZSLTXQ")
+            ..assetId = 69768909
             ..suggestedParams = params
+            ..flatFee = 2000 
             ).build();
             AtomicTransfer.group([transaction1, transaction2]);
-            final txs = await AlgoSigner.signTransactions([
-              {
-                'txn': transaction1.toBase64()
-              },
-              {
-                'txn': transaction2.toBase64()
-              },
-              
+            List<Map<String,dynamic>> txs = []; 
+            try{
+              txs = await MyAlgoConnect.signTransactions([
+              transaction1.toBase64(),
+              transaction2.toBase64()
             ]);
+            } on MyAlgoException catch(e){
+              print(e.cause);
+            }
             
-            final blob = txs[0]['blob'];
-            final txId = await AlgoSigner.send(ledger: 'TestNet', transaction: blob);
+            final blob1 = txs[0]['blob'];
+            final blob2 = txs[1]['blob'];
+            String txId = "";
+            try{
+              txId = await acc.algorand.sendRawTransactions([
+                base64Decode(blob1),
+                base64Decode(blob2)
+              ]);
+            } on AlgorandException catch (ex){
+              final cause = ex.cause;
+              if (cause is DioError) {
+                print(cause.response?.data['message']);
+              }
+            }
             final tx = await acc.algorand.waitForConfirmation(txId);
+            print('https://testnet.algoexplorer.io/tx/$txId');
           }
         },
         shape:
