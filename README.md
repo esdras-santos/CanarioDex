@@ -30,7 +30,7 @@ flutter run --release
 
 ![alt text](https://github.com/esdras-santos/CanarioDex/blob/master/extra_media/connect.PNG?raw=true)
 
-2. after connect with `MyAlgo` you can start to Swap or Add/Remove liquidity
+2. after connect with `MyAlgo` you can start to Swap or Add/Remove liquidity (To Add or Remove liquidity you need to own both tokens of the pair)
 
 ![alt text](https://github.com/esdras-santos/CanarioDex/blob/master/extra_media/swap.PNG?raw=true)
 
