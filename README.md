@@ -21,8 +21,12 @@ git clone https://github.com/esdras-santos/CanarioDex
 
 3. Inside the repositore type run: 
 ```shell
-flutter run --release
+flutter run -d web-server
 ```
+
+4. Now just copy the link on the output  and past it into your chrome browser (in this cada `http://localhost:50682`)
+
+![alt text](https://github.com/esdras-santos/CanarioDex/blob/master/extra_media/running.PNG?raw=true)
 
 ## Usage
 
