@@ -1,6 +1,6 @@
 # canarioswap
 
-## WARNING: THIS IS NOT PROODUCTION LEVEL CODE
+## WARNING: THIS IS NOT PRODUCTION LEVEL CODE
 
 Canario Swap is DEX (Decentralized Exchange) Uniswap-like built on top of the Algorand blockchain and takes advantage of the benefits of this platform such as fast transaction confirmation and low fees. With Canario Swap you can swap between Algo to Token, Token to Algo and Token to Token. Currently there is only one Token (CNT) to swap so the Token to Token option is not available on the front-end.
 
