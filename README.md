@@ -51,6 +51,9 @@ Add more Tokens and Fix possible UI and smart contract bugs
 Check extra_media
 
 You can support by making donations via:
+
 Algorand wallet: E7BQFCXUSNTXLCIQ5C72SZOSFI6QDKMNRFPYX25DMHB3N4IAE3QRPHT7XM
+
 Ethereum wallet: 0xaC792C1ED83F7CAFaE162448a89cfa19674Fb9EE
+
 Bitcoin wallet: bc1qumrknsuswfzrnwy9uea8evyvm7c5j8t7m02jln
